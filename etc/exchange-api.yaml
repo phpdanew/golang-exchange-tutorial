@@ -1,0 +1,32 @@
+Name: exchange-api
+Host: 0.0.0.0
+Port: 8888
+
+# JWT配置
+Auth:
+  AccessSecret: your-access-secret-change-in-production
+  AccessExpire: 7200
+
+# 数据库配置
+DataSource: postgres://exchange_user:exchange_pass@localhost:5432/exchange?sslmode=disable
+
+# Redis配置
+Redis:
+  Host: localhost:6379
+  Type: node
+  Pass: ""
+
+# 日志配置
+Log:
+  ServiceName: exchange-api
+  Mode: file
+  Path: logs
+  Level: info
+  Compress: true
+  KeepDays: 7
+  StackCooldownMillis: 100
+
+# 限流配置
+RateLimit:
+  Seconds: 1
+  Quota: 1000

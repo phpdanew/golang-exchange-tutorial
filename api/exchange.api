@@ -1,0 +1,429 @@
+syntax = "v1"
+
+info(
+	title: "加密货币交易所API"
+	desc: "基于go-zero的交易所后端API"
+	author: "exchange-team"
+	version: "v1.0"
+)
+
+type (
+	// 通用响应
+	BaseResponse {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+
+	// 用户注册请求
+	RegisterRequest {
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,min=6"`
+		Nickname string `json:"nickname" validate:"required"`
+	}
+
+	// 用户登录请求
+	LoginRequest {
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required"`
+	}
+
+	// 登录响应
+	LoginResponse {
+		Token string `json:"token"`
+		User  User   `json:"user"`
+	}
+
+	// 用户信息
+	User {
+		ID       uint64 `json:"id"`
+		Email    string `json:"email"`
+		Nickname string `json:"nickname"`
+		Status   int64  `json:"status"`
+	}
+
+	// 创建订单请求
+	CreateOrderRequest {
+		Symbol string `json:"symbol" validate:"required"`           // 交易对符号，如BTC/USDT
+		Type   int64  `json:"type" validate:"required,min=1,max=2"` // 订单类型：1-限价单，2-市价单
+		Side   int64  `json:"side" validate:"required,min=1,max=2"` // 交易方向：1-买入，2-卖出
+		Amount string `json:"amount" validate:"required"`           // 订单数量（基础币种）
+		Price  string `json:"price,omitempty"`                      // 订单价格（限价单必填）
+	}
+
+	// 取消订单请求
+	CancelOrderRequest {
+		OrderID uint64 `json:"order_id" validate:"required"` // 订单ID
+	}
+
+	// 查询订单请求
+	QueryOrdersRequest {
+		Symbol string `json:"symbol,omitempty"` // 交易对符号（可选）
+		Status int64  `json:"status,omitempty"` // 订单状态（可选）
+		Page   int64  `json:"page,omitempty"`   // 页码，默认1
+		Size   int64  `json:"size,omitempty"`   // 每页大小，默认20
+	}
+
+	// 订单信息
+	Order {
+		ID           uint64 `json:"id"`            // 订单ID
+		UserID       uint64 `json:"user_id"`       // 用户ID
+		Symbol       string `json:"symbol"`        // 交易对符号
+		Type         int64  `json:"type"`          // 订单类型：1-限价单，2-市价单
+		Side         int64  `json:"side"`          // 交易方向：1-买入，2-卖出
+		Amount       string `json:"amount"`        // 订单总数量
+		Price        string `json:"price"`         // 订单价格
+		FilledAmount string `json:"filled_amount"` // 已成交数量
+		Status       int64  `json:"status"`        // 订单状态：1-待成交，2-部分成交，3-完全成交，4-已取消
+		CreatedAt    string `json:"created_at"`    // 创建时间
+		UpdatedAt    string `json:"updated_at"`    // 更新时间
+	}
+
+	// 订单列表响应
+	OrderListResponse {
+		Orders []Order `json:"orders"` // 订单列表
+		Total  int64   `json:"total"`  // 总数量
+		Page   int64   `json:"page"`   // 当前页码
+		Size   int64   `json:"size"`   // 每页大小
+	}
+
+	// 交易对信息
+	TradingPair {
+		ID            uint64 `json:"id"`             // 交易对ID
+		Symbol        string `json:"symbol"`         // 交易对符号
+		BaseCurrency  string `json:"base_currency"`  // 基础币种
+		QuoteCurrency string `json:"quote_currency"` // 计价币种
+		MinAmount     string `json:"min_amount"`     // 最小交易数量
+		MaxAmount     string `json:"max_amount"`     // 最大交易数量
+		PriceScale    int64  `json:"price_scale"`    // 价格精度
+		AmountScale   int64  `json:"amount_scale"`   // 数量精度
+		Status        int64  `json:"status"`         // 状态：1-正常，2-禁用
+		CreatedAt     string `json:"created_at"`     // 创建时间
+	}
+
+	// 交易对列表响应
+	TradingPairListResponse {
+		TradingPairs []TradingPair `json:"trading_pairs"` // 交易对列表
+	}
+
+	// 市场深度请求
+	OrderBookRequest {
+		Symbol string `json:"symbol" validate:"required"` // 交易对符号
+		Depth  int64  `json:"depth,omitempty"`            // 深度层数，默认20
+	}
+
+	// 价格层级
+	PriceLevel {
+		Price  string `json:"price"`  // 价格
+		Amount string `json:"amount"` // 数量
+	}
+
+	// 订单簿响应
+	OrderBookResponse {
+		Symbol string       `json:"symbol"` // 交易对符号
+		Bids   []PriceLevel `json:"bids"`   // 买盘深度，价格从高到低
+		Asks   []PriceLevel `json:"asks"`   // 卖盘深度，价格从低到高
+	}
+
+	// K线数据请求
+	KlineRequest {
+		Symbol    string `json:"symbol" validate:"required"`   // 交易对符号
+		Interval  string `json:"interval" validate:"required"` // 时间周期：1m,5m,15m,1h,4h,1d
+		Limit     int64  `json:"limit,omitempty"`              // 返回数量，默认100，最大1000
+		StartTime int64  `json:"start_time,omitempty"`         // 开始时间戳（毫秒）
+		EndTime   int64  `json:"end_time,omitempty"`           // 结束时间戳（毫秒）
+	}
+
+	// K线数据
+	Kline {
+		OpenTime  int64  `json:"open_time"`  // 开盘时间戳（毫秒）
+		CloseTime int64  `json:"close_time"` // 收盘时间戳（毫秒）
+		Open      string `json:"open"`       // 开盘价
+		High      string `json:"high"`       // 最高价
+		Low       string `json:"low"`        // 最低价
+		Close     string `json:"close"`      // 收盘价
+		Volume    string `json:"volume"`     // 成交量（基础币种）
+	}
+
+	// K线数据响应
+	KlineResponse {
+		Symbol string  `json:"symbol"` // 交易对符号
+		Klines []Kline `json:"klines"` // K线数据列表
+	}
+
+	// 成交历史请求
+	TradeHistoryRequest {
+		Symbol string `json:"symbol" validate:"required"` // 交易对符号
+		Limit  int64  `json:"limit,omitempty"`            // 返回数量，默认50，最大500
+	}
+
+	// 成交记录
+	Trade {
+		ID        uint64 `json:"id"`         // 成交记录ID
+		Symbol    string `json:"symbol"`     // 交易对符号
+		Price     string `json:"price"`      // 成交价格
+		Amount    string `json:"amount"`     // 成交数量
+		Side      int64  `json:"side"`       // 成交方向：1-买入，2-卖出（以taker方向为准）
+		CreatedAt int64  `json:"created_at"` // 成交时间戳（毫秒）
+	}
+
+	// 成交历史响应
+	TradeHistoryResponse {
+		Symbol string  `json:"symbol"` // 交易对符号
+		Trades []Trade `json:"trades"` // 成交记录列表
+	}
+
+	// 24小时统计数据
+	Ticker {
+		Symbol        string `json:"symbol"`         // 交易对符号
+		LastPrice     string `json:"last_price"`     // 最新成交价
+		Change24h     string `json:"change_24h"`     // 24小时价格变化
+		ChangePercent string `json:"change_percent"` // 24小时涨跌幅百分比
+		Volume24h     string `json:"volume_24h"`     // 24小时成交量
+		High24h       string `json:"high_24h"`       // 24小时最高价
+		Low24h        string `json:"low_24h"`        // 24小时最低价
+		UpdatedAt     int64  `json:"updated_at"`     // 更新时间戳（毫秒）
+	}
+
+	// 24小时统计响应
+	TickerResponse {
+		Ticker Ticker `json:"ticker"` // 统计数据
+	}
+
+	// 所有交易对24小时统计响应
+	AllTickersResponse {
+		Tickers []Ticker `json:"tickers"` // 所有交易对统计数据
+	}
+
+	// 用户余额信息
+	Balance {
+		Currency  string `json:"currency"`   // 币种代码，如BTC、ETH、USDT
+		Available string `json:"available"`  // 可用余额
+		Frozen    string `json:"frozen"`     // 冻结余额
+		UpdatedAt string `json:"updated_at"` // 最后更新时间
+	}
+
+	// 余额查询响应
+	BalanceResponse {
+		Balances []Balance `json:"balances"` // 用户所有币种余额列表
+	}
+
+	// 充值请求
+	DepositRequest {
+		Currency string `json:"currency" validate:"required"` // 币种代码
+		Amount   string `json:"amount" validate:"required"`   // 充值金额
+	}
+
+	// 充值响应
+	DepositResponse {
+		TransactionID string `json:"transaction_id"` // 充值交易ID
+		Currency      string `json:"currency"`       // 币种代码
+		Amount        string `json:"amount"`         // 充值金额
+		Status        int64  `json:"status"`         // 充值状态：1-处理中，2-成功，3-失败
+		CreatedAt     string `json:"created_at"`     // 创建时间
+	}
+
+	// 提现请求
+	WithdrawRequest {
+		Currency string `json:"currency" validate:"required"` // 币种代码
+		Amount   string `json:"amount" validate:"required"`   // 提现金额
+		Address  string `json:"address" validate:"required"`  // 提现地址
+	}
+
+	// 提现响应
+	WithdrawResponse {
+		TransactionID string `json:"transaction_id"` // 提现交易ID
+		Currency      string `json:"currency"`       // 币种代码
+		Amount        string `json:"amount"`         // 提现金额
+		Address       string `json:"address"`        // 提现地址
+		Fee           string `json:"fee"`            // 提现手续费
+		Status        int64  `json:"status"`         // 提现状态：1-待审核，2-处理中，3-成功，4-失败
+		CreatedAt     string `json:"created_at"`     // 创建时间
+	}
+
+	// 资产交易记录请求
+	AssetHistoryRequest {
+		Currency string `json:"currency,omitempty"` // 币种代码（可选）
+		Type     int64  `json:"type,omitempty"`     // 记录类型：1-充值，2-提现（可选）
+		Page     int64  `json:"page,omitempty"`     // 页码，默认1
+		Size     int64  `json:"size,omitempty"`     // 每页大小，默认20
+	}
+
+	// 资产交易记录
+	AssetTransaction {
+		ID            string `json:"id"`             // 交易记录ID
+		Currency      string `json:"currency"`       // 币种代码
+		Type          int64  `json:"type"`           // 记录类型：1-充值，2-提现
+		Amount        string `json:"amount"`         // 交易金额
+		Fee           string `json:"fee"`            // 手续费
+		Status        int64  `json:"status"`         // 交易状态
+		Address       string `json:"address"`        // 地址（提现时有值）
+		TransactionID string `json:"transaction_id"` // 区块链交易ID
+		CreatedAt     string `json:"created_at"`     // 创建时间
+		UpdatedAt     string `json:"updated_at"`     // 更新时间
+	}
+
+	// 资产交易记录响应
+	AssetHistoryResponse {
+		Transactions []AssetTransaction `json:"transactions"` // 交易记录列表
+		Total        int64              `json:"total"`        // 总数量
+		Page         int64              `json:"page"`         // 当前页码
+		Size         int64              `json:"size"`         // 每页大小
+	}
+
+	// 创建交易对请求
+	CreateTradingPairRequest {
+		Symbol        string `json:"symbol" validate:"required"`         // 交易对符号，如BTC/USDT
+		BaseCurrency  string `json:"base_currency" validate:"required"`  // 基础币种
+		QuoteCurrency string `json:"quote_currency" validate:"required"` // 计价币种
+		MinAmount     string `json:"min_amount" validate:"required"`     // 最小交易数量
+		MaxAmount     string `json:"max_amount" validate:"required"`     // 最大交易数量
+		PriceScale    int64  `json:"price_scale" validate:"required"`    // 价格精度
+		AmountScale   int64  `json:"amount_scale" validate:"required"`   // 数量精度
+	}
+
+	// 更新交易对请求
+	UpdateTradingPairRequest {
+		MinAmount   string `json:"min_amount,omitempty"`   // 最小交易数量
+		MaxAmount   string `json:"max_amount,omitempty"`   // 最大交易数量
+		PriceScale  int64  `json:"price_scale,omitempty"`  // 价格精度
+		AmountScale int64  `json:"amount_scale,omitempty"` // 数量精度
+		Status      int64  `json:"status,omitempty"`       // 状态：1-正常，2-禁用
+	}
+
+	// 交易对统计响应
+	TradingPairStatsResponse {
+		TotalPairs               int      `json:"total_pairs"`                // 总交易对数量
+		ActivePairs              int      `json:"active_pairs"`               // 活跃交易对数量
+		DisabledPairs            int      `json:"disabled_pairs"`             // 禁用交易对数量
+		SupportedBaseCurrencies  []string `json:"supported_base_currencies"`  // 支持的基础币种
+		SupportedQuoteCurrencies []string `json:"supported_quote_currencies"` // 支持的计价币种
+	}
+)
+
+@server(
+	group: auth
+	prefix: /api/v1/auth
+)
+service exchange-api {
+	@doc "用户注册"
+	@handler register
+	post /register (RegisterRequest) returns (User)
+
+	@doc "用户登录"
+	@handler login
+	post /login (LoginRequest) returns (LoginResponse)
+}
+
+@server(
+	group: user
+	prefix: /api/v1/user
+	jwt: Auth
+)
+service exchange-api {
+	@doc "获取用户信息"
+	@handler profile
+	get /profile returns (User)
+}
+
+@server(
+	group: trading
+	prefix: /api/v1/trading
+	jwt: Auth
+)
+service exchange-api {
+	@doc "创建订单"
+	@handler createOrder
+	post /orders (CreateOrderRequest) returns (Order)
+
+	@doc "取消订单"
+	@handler cancelOrder
+	delete /orders (CancelOrderRequest) returns (BaseResponse)
+
+	@doc "查询用户订单"
+	@handler queryOrders
+	get /orders (QueryOrdersRequest) returns (OrderListResponse)
+
+	@doc "获取订单详情"
+	@handler getOrder
+	get /orders/:id returns (Order)
+}
+
+@server(
+	group: asset
+	prefix: /api/v1/asset
+	jwt: Auth
+)
+service exchange-api {
+	@doc "查询用户余额"
+	@handler getBalances
+	get /balances returns (BalanceResponse)
+
+	@doc "用户充值"
+	@handler deposit
+	post /deposit (DepositRequest) returns (DepositResponse)
+
+	@doc "用户提现"
+	@handler withdraw
+	post /withdraw (WithdrawRequest) returns (WithdrawResponse)
+
+	@doc "查询资产交易记录"
+	@handler getAssetHistory
+	get /history (AssetHistoryRequest) returns (AssetHistoryResponse)
+}
+
+@server(
+	group: market
+	prefix: /api/v1/market
+)
+service exchange-api {
+	@doc "获取所有交易对"
+	@handler getTradingPairs
+	get /trading-pairs returns (TradingPairListResponse)
+
+	@doc "获取交易对详情"
+	@handler getTradingPair
+	get /trading-pairs/:symbol returns (TradingPair)
+
+	@doc "获取市场深度"
+	@handler getOrderBook
+	get /depth (OrderBookRequest) returns (OrderBookResponse)
+
+	@doc "获取K线数据"
+	@handler getKlines
+	get /klines (KlineRequest) returns (KlineResponse)
+
+	@doc "获取成交历史"
+	@handler getTradeHistory
+	get /trades (TradeHistoryRequest) returns (TradeHistoryResponse)
+
+	@doc "获取24小时统计数据"
+	@handler getTicker
+	get /ticker/:symbol returns (TickerResponse)
+
+	@doc "获取所有交易对24小时统计"
+	@handler getAllTickers
+	get /tickers returns (AllTickersResponse)
+}
+
+@server(
+	group: admin
+	prefix: /api/v1/admin
+	jwt: Auth
+)
+service exchange-api {
+	@doc "创建交易对"
+	@handler createTradingPair
+	post /trading-pairs (CreateTradingPairRequest) returns (TradingPair)
+
+	@doc "更新交易对"
+	@handler updateTradingPair
+	put /trading-pairs/:symbol (UpdateTradingPairRequest) returns (TradingPair)
+
+	@doc "获取交易对统计信息"
+	@handler getTradingPairStats
+	get /trading-pairs/stats returns (TradingPairStatsResponse)
+
+	@doc "获取所有交易对（包括禁用的）"
+	@handler getAllTradingPairs
+	get /trading-pairs returns (TradingPairListResponse)
+}
